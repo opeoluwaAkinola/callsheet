@@ -1,0 +1,66 @@
+# Full stack locally: `docker compose up --build`, then open http://localhost:8080
+name: callsheet
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: callsheet
+      POSTGRES_USER: callsheet
+      POSTGRES_PASSWORD: callsheet
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U callsheet"]
+      interval: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    ports: ["127.0.0.1:${MONGO_PORT:-27017}:27017"]
+    volumes: [mongodata:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      retries: 10
+
+  scheduling-service:
+    build: ./services/scheduling-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/callsheet
+      DB_USER: callsheet
+      DB_PASSWORD: callsheet
+    ports: ["8081:8081"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  crew-service:
+    build: ./services/crew-service
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+    ports: ["8082:8082"]
+    depends_on:
+      mongo: { condition: service_healthy }
+
+  gateway:
+    build: ./services/gateway
+    environment:
+      SCHEDULING_URL: http://scheduling-service:8081
+      CREW_URL: http://crew-service:8082
+      # Set to a real bucket (plus AWS credentials) to trigger the PDF Lambda; unset = dry run.
+      CALLSHEET_BUCKET: ${CALLSHEET_BUCKET:-}
+    ports: ["4000:4000"]
+    depends_on:
+      scheduling-service: { condition: service_healthy }
+      crew-service: { condition: service_healthy }
+
+  web:
+    build: ./web
+    environment:
+      GATEWAY_URL: http://gateway:4000
+    ports: ["8080:8080"]
+    depends_on: [gateway]
+
+volumes:
+  pgdata:
+  mongodata:

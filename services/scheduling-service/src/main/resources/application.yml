@@ -1,0 +1,26 @@
+server:
+  port: ${PORT:8081}
+spring:
+  application:
+    name: scheduling-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/callsheet}
+    username: ${DB_USER:callsheet}
+    password: ${DB_PASSWORD:callsheet}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+callsheet:
+  scheduling:
+    # Minimum rest (hours) between one wrap and the next call for the same crew member.
+    min-turnaround-hours: ${MIN_TURNAROUND_HOURS:10}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

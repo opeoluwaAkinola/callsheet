@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduling-service
+  labels: { app.kubernetes.io/name: scheduling-service, app.kubernetes.io/part-of: callsheet }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app.kubernetes.io/name: scheduling-service }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: scheduling-service, app.kubernetes.io/part-of: callsheet }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8081"
+    spec:
+      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: app
+          image: callsheet/scheduling-service
+          ports: [{ name: http, containerPort: 8081 }]
+          env:
+            - name: DB_URL
+              valueFrom: { secretKeyRef: { name: callsheet-db, key: postgres-jdbc-url } }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: callsheet-db, key: postgres-user } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: callsheet-db, key: postgres-password } }
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { memory: 768Mi }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+      volumes: [{ name: tmp, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scheduling-service
+spec:
+  selector: { app.kubernetes.io/name: scheduling-service }
+  ports: [{ name: http, port: 8081, targetPort: http }]

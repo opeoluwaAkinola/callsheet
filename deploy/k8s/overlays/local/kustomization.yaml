@@ -1,0 +1,28 @@
+# kind create cluster --name callsheet
+# make images && kind load docker-image callsheet/{scheduling-service,crew-service,gateway,web}:local --name callsheet
+# kubectl apply -k deploy/k8s/overlays/local && kubectl -n callsheet port-forward svc/web 8080:80
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: callsheet
+resources:
+  - ../../base
+  - databases.yaml
+secretGenerator:
+  - name: callsheet-db
+    literals:
+      - postgres-jdbc-url=jdbc:postgresql://postgres:5432/callsheet
+      - postgres-user=callsheet
+      - postgres-password=callsheet
+      - mongo-url=mongodb://mongo:27017
+    options:
+      disableNameSuffixHash: true
+replicas:
+  - { name: scheduling-service, count: 1 }
+  - { name: crew-service, count: 1 }
+  - { name: gateway, count: 1 }
+  - { name: web, count: 1 }
+images:
+  - { name: callsheet/scheduling-service, newTag: local }
+  - { name: callsheet/crew-service, newTag: local }
+  - { name: callsheet/gateway, newTag: local }
+  - { name: callsheet/web, newTag: local }

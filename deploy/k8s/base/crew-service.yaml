@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crew-service
+  labels: { app.kubernetes.io/name: crew-service, app.kubernetes.io/part-of: callsheet }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app.kubernetes.io/name: crew-service }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: crew-service, app.kubernetes.io/part-of: callsheet }
+    spec:
+      securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: app
+          image: callsheet/crew-service
+          ports: [{ name: http, containerPort: 8082 }]
+          env:
+            - name: MONGO_URL
+              valueFrom: { secretKeyRef: { name: callsheet-db, key: mongo-url } }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crew-service
+spec:
+  selector: { app.kubernetes.io/name: crew-service }
+  ports: [{ name: http, port: 8082, targetPort: http }]

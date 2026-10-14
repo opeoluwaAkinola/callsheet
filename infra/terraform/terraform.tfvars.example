@@ -1,0 +1,3 @@
+region       = "us-west-2"
+environment  = "dev"
+sender_email = "" # e.g. "callsheets@yourdomain.com" once verified in SES

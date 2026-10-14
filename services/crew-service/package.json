@@ -1,0 +1,33 @@
+{
+  "name": "crew-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CallSheet crew service: crew profiles, departments and availability (Node.js + MongoDB)",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src test"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "mongodb": "^6.21.0",
+    "pino": "^9.14.0",
+    "pino-http": "^10.5.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0",
+    "supertest": "^7.3.1",
+    "vitest": "^2.1.9"
+  }
+}
